@@ -12,7 +12,6 @@ import maya.cmds as mc
 
 # Extra imports
 import os
-import sys
 
 VERSION = 0.1
 WINDOWTITLE = "Fast Renamer"
@@ -21,9 +20,22 @@ WINDOWNAME = "fast_renamer"
 # Standard strings to flag un-named items.
 STANDARDPOLYS = ["pCube",
                  "pSphere",
-                 "pCylinder", ]
+                 "pCylinder",
+                 "pCone",
+                 "pPlane",
+                 "pTorus",
+                 "pPrism",
+                 "pPyramid",
+                 "pPipe",
+                 "pHelix",
+                 "pSolid"]
 
-STANDARDNURBS = ["nCircle", ]
+STANDARDNURBS = ["nurbsSphere",
+                 "nurbsCube",
+                 "nurbsCone",
+                 "nurbsCircle",
+                 "nurbsTorus",
+                 "nurbsSquare"]
 
 STANDARDEXTRA = ["joint", ]
 
@@ -152,32 +164,51 @@ class FastRenamer(BASE_CLASS, UI_OBJECT):
         extralist = []
 
         self.line_rename.setText(self.renamelist[0])
+        self.focus(self.renamelist[0])
 
     def on_enter_press(self):
-        oldname = self.line_rename.text
+        oldname = self.renamelist[0]
+        newname = self.line_rename.text()
 
-        if oldname == "Done":
+        # # Controle van lengte lijst?
+
+        if newname == "Done":
+            self.focus("Done")
             raise Warning("Nothing to rename that with current filter-settings.")
 
-        elif oldname == self.renamelist[0]:
+        elif newname == oldname:
             self.renamelist.pop(0)
             self.line_rename.setText(self.renamelist[0])
+            self.focus(self.renamelist[0])
 
-        elif not oldname:
+        elif not newname:
             raise RuntimeError("Can't rename to an empty string.")
 
         else:
-            mc.rename(self.renamelist[0], self.line_rename.text())
-        print "- Rename list: ", self.renamelist
-        print "-- ENTER --"
+            self._HISTORY.append(newname)
+            mc.rename(oldname, newname)
+            self.renamelist.pop(0)
+            self.line_rename.setText(self.renamelist[0])
+            self.focus(self.renamelist[0])
 
-    # def on_up_press(self):
-    #     print "-- UP --"
-    #     raise NotImplementedError
-    #
-    # def on_down_press(self):
-    #     raise NotImplementedError
+    def focus(self, item):
+        activepanel = mc.getPanel(wf=True)
+        activecamera = mc.modelEditor(activepanel, q=True, camera=True)
 
+        if item == "Done":
+            mc.select(clear=True)
+            mc.viewFit(activecamera)
+            mc.isolateSelect(activepanel, state=0)
+        else:
+            mc.isolateSelect(activepanel, removeSelected=True)
+            mc.select(item)
+            mc.viewFit(activecamera)
+            currentstate = mc.isolateSelect(activepanel, q=True, state=True)
+
+            if not currentstate:
+                mc.isolateSelect(activepanel, state=True)
+
+            mc.isolateSelect(activepanel, addSelected=True)
 
 # Function to show the UI
 def show():
